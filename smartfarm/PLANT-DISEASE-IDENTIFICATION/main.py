@@ -40,7 +40,7 @@ if app_mode == "🏠 Home":
     st.markdown("<h1 style='text-align: center;'>🌿 SmartFarm Disease Detection</h1>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### 👤 Reviewer")
-    st.markdown("**Name**: Nishant Borude")
+    st.markdown("**Name**: piyush Borude")
     st.markdown("**Location**: India")
     st.markdown("**Status**: Active profile")
 
