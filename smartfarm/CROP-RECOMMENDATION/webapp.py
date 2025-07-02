@@ -2,90 +2,89 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 import pickle
 import os
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import classification_report
-from sklearn import metrics
-from sklearn import tree
-from sklearn.metrics import accuracy_score
+from PIL import Image
 import warnings
 warnings.filterwarnings('ignore')
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from PIL import Image
 
-# MUST BE THE FIRST STREAMLIT COMMAND
-st.set_page_config(
-    page_title="SmartFarm",
-    page_icon="🌾",
-    layout="centered"
-)
+# ✅ Streamlit Page Config (MUST be first Streamlit command)
+st.set_page_config(page_title="SmartFarm", page_icon="🌾", layout="centered")
 
-# Load data and models
-@st.cache_data
-def load_data():
-    df = pd.read_csv('Crop_recommendation.csv')
-    X = df[['N', 'P','K','temperature', 'humidity', 'ph', 'rainfall']]
-    y = df['label']
-    return X, y, df
+# ✅ Display Header Image
+img_path = os.path.join(os.path.dirname(__file__), "crop.png")
+if os.path.exists(img_path):
+    img = Image.open(img_path)
+    st.image(img, use_column_width=True)
+else:
+    st.warning("Image 'crop.png' not found.")
 
-@st.cache_resource
-def load_model():
-    try:
-        return pickle.load(open('RF.pkl', 'rb'))
-    except:
-        # Train and save model if not found
-        X, y, _ = load_data()
-        Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, y, test_size=0.3, random_state=42)
-        RF = RandomForestClassifier(n_estimators=20, random_state=5)
-        RF.fit(Xtrain, Ytrain)
-        pickle.dump(RF, open('RF.pkl', 'wb'))
-        return RF
+# ✅ Load CSV dataset
+csv_path = os.path.join(os.path.dirname(__file__), 'Crop_recommendation.csv')
+if not os.path.exists(csv_path):
+    st.error("❌ 'Crop_recommendation.csv' file not found. Please make sure it's in the same folder.")
+    st.stop()
 
-# Load resources
-X, y, df = load_data()
-RF_Model_pkl = load_model()
-img = Image.open("crop.png")
+df = pd.read_csv(csv_path)
 
-# App functions
+# ✅ Prepare data
+X = df[['N', 'P', 'K', 'temperature', 'humidity', 'ph', 'rainfall']]
+y = df['label']
+Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# ✅ Check if model file exists
+model_path = os.path.join(os.path.dirname(__file__), 'RF.pkl')
+
+if os.path.exists(model_path) and os.path.getsize(model_path) > 0:
+    # Load the model
+    with open(model_path, 'rb') as f:
+        RF_Model = pickle.load(f)
+else:
+    # Train and save model
+    RF_Model = RandomForestClassifier(n_estimators=20, random_state=5)
+    RF_Model.fit(Xtrain, Ytrain)
+    with open(model_path, 'wb') as f:
+        pickle.dump(RF_Model, f)
+
+# ✅ Crop Prediction Function
 def predict_crop(nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall):
-    prediction = RF_Model_pkl.predict(np.array([nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall]).reshape(1, -1))
-    return prediction
+    data = np.array([[nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall]])
+    prediction = RF_Model.predict(data)
+    return prediction[0]
 
+# ✅ Display Crop Image
 def show_crop_image(crop_name):
-    image_path = os.path.join('crop_images', crop_name.lower()+'.jpg')
-    if os.path.exists(image_path):
-        st.image(image_path, caption=f"Recommended crop: {crop_name}", use_column_width=True)
+    img_file = os.path.join("crop_images", crop_name.lower() + ".jpg")
+    if os.path.exists(img_file):
+        st.image(img_file, caption=f"Recommended Crop: {crop_name}", use_column_width=True)
     else:
-        st.error("Image not found for the predicted crop.")
+        st.info(f"No image found for '{crop_name}'.")
 
-# Main app
+# ✅ Main Streamlit App UI
 def main():
-    st.markdown("<h1 style='text-align: center; color: green;'>🌾 SmartFarm: Smart Crop Recommendations</h1>", unsafe_allow_html=True)
-    st.image(img, width=200)
-    
-    st.sidebar.markdown("<h2 style='color: green;'>🌱 SmartFarm</h2>", unsafe_allow_html=True)
-    st.sidebar.header("Enter Crop Details")
+    st.markdown("<h1 style='text-align: center; color: green;'>🌱 SmartFarm: Smart Crop Recommendations</h1>", unsafe_allow_html=True)
 
-    # Inputs
-    nitrogen = st.sidebar.number_input("Nitrogen", min_value=0.0, max_value=140.0, value=0.0, step=0.1)
-    phosphorus = st.sidebar.number_input("Phosphorus", min_value=0.0, max_value=145.0, value=0.0, step=0.1)
-    potassium = st.sidebar.number_input("Potassium", min_value=0.0, max_value=205.0, value=0.0, step=0.1)
-    temperature = st.sidebar.number_input("Temperature (°C)", min_value=0.0, max_value=51.0, value=0.0, step=0.1)
-    humidity = st.sidebar.number_input("Humidity (%)", min_value=0.0, max_value=100.0, value=0.0, step=0.1)
-    ph = st.sidebar.number_input("pH Level", min_value=0.0, max_value=14.0, value=0.0, step=0.1)
-    rainfall = st.sidebar.number_input("Rainfall (mm)", min_value=0.0, max_value=500.0, value=0.0, step=0.1)
+    st.sidebar.header("🌾 Input Soil and Weather Conditions")
 
-    if st.sidebar.button("Predict"):
-        inputs = np.array([[nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall]])
-        if not inputs.any() or np.isnan(inputs).any() or (inputs == 0).all():
-            st.error("Please fill in all input fields with valid values before predicting.")
-        else:
-            prediction = predict_crop(nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall)
-            st.success(f"The recommended crop is: {prediction[0]}")
-            show_crop_image(prediction[0])
+    nitrogen = st.sidebar.number_input("Nitrogen (N)", min_value=0.0, max_value=140.0, value=0.0, step=0.5)
+    phosphorus = st.sidebar.number_input("Phosphorus (P)", min_value=0.0, max_value=145.0, value=0.0, step=0.5)
+    potassium = st.sidebar.number_input("Potassium (K)", min_value=0.0, max_value=205.0, value=0.0, step=0.5)
+    temperature = st.sidebar.number_input("Temperature (°C)", min_value=0.0, max_value=50.0, value=25.0, step=0.5)
+    humidity = st.sidebar.number_input("Humidity (%)", min_value=0.0, max_value=100.0, value=50.0, step=0.5)
+    ph = st.sidebar.number_input("pH Level", min_value=0.0, max_value=14.0, value=6.5, step=0.1)
+    rainfall = st.sidebar.number_input("Rainfall (mm)", min_value=0.0, max_value=500.0, value=100.0, step=0.5)
 
-if __name__ == '__main__':
+    if st.sidebar.button("🌾 Recommend Crop"):
+        prediction = predict_crop(nitrogen, phosphorus, potassium, temperature, humidity, ph, rainfall)
+        st.success(f"✅ Based on your input, the recommended crop is: **{prediction.upper()}**")
+        show_crop_image(prediction)
+
+    # Optional: Show sample data
+    with st.expander("📊 View Sample Data"):
+        st.dataframe(df.head(10))
+
+# ✅ Run the App
+if __name__ == "__main__":
     main()
