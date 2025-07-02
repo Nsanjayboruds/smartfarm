@@ -2,7 +2,6 @@ import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image, UnidentifiedImageError
-import os
 
 # Set page config (must be the first Streamlit command)
 st.set_page_config(page_title="SmartFarm Disease Detection", layout="centered")
@@ -34,18 +33,6 @@ def model_prediction(test_image):
 st.sidebar.title("🌾 SmartFarm")
 app_mode = st.sidebar.selectbox("Navigate", ["🏠 Home", "🦠 Disease Recognition"])
 
-# Display banner image safely
-image_path = "Diseases.png"
-if os.path.exists(image_path):
-    try:
-        img = Image.open(image_path)
-        st.image(img, use_column_width=True)
-    except (UnidentifiedImageError, OSError):
-        st.error("🚫 'Diseases.png' exists but could not be opened.")
-else:
-    st.warning("🔺 'Diseases.png' not found. Please ensure it's in the same folder.")
-    st.image("https://via.placeholder.com/900x200.png?text=SmartFarm+Disease+Detection", use_column_width=True)
-
 # Home Page
 if app_mode == "🏠 Home":
     st.markdown("<h1 style='text-align: center;'>🌿 SmartFarm Disease Detection</h1>", unsafe_allow_html=True)
@@ -62,7 +49,7 @@ elif app_mode == "🦠 Disease Recognition":
 
     if test_image:
         if st.button("Show Image"):
-            st.image(test_image, use_column_width=True)
+            st.image(test_image, use_container_width=True)
 
         if st.button("Predict"):
             st.snow()
@@ -88,7 +75,3 @@ elif app_mode == "🦠 Disease Recognition":
             ]
 
             st.success(f"🌱 Model Prediction: **{class_name[result_index]}**")
-
-   
-
-    
