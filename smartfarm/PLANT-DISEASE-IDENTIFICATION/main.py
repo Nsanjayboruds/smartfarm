@@ -1,7 +1,8 @@
 import streamlit as st
 import tensorflow as tf
 import numpy as np
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
+import os
 
 # Set page config (must be the first Streamlit command)
 st.set_page_config(page_title="SmartFarm Disease Detection", layout="centered")
@@ -15,21 +16,22 @@ footer {visibility: hidden;}
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-# Load the model once (cached)
+# Load the model once (using absolute-safe path)
 @st.cache_resource
 def load_model():
-    return tf.keras.models.load_model("trained_plant_disease_model.keras")
+    model_path = os.path.join(os.path.dirname(__file__), "trained_plant_disease_model.keras")
+    return tf.keras.models.load_model(model_path)
 
 # Predict function
 def model_prediction(test_image):
     model = load_model()
     image = tf.keras.preprocessing.image.load_img(test_image, target_size=(128, 128))
     input_arr = tf.keras.preprocessing.image.img_to_array(image)
-    input_arr = np.array([input_arr])  # Convert single image to batch
+    input_arr = np.array([input_arr])  # Convert to batch format
     predictions = model.predict(input_arr)
     return np.argmax(predictions)
 
-# Sidebar navigation
+# Sidebar
 st.sidebar.title("🌾 SmartFarm")
 app_mode = st.sidebar.selectbox("Navigate", ["🏠 Home", "🦠 Disease Recognition"])
 
